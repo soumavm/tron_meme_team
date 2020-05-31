@@ -1,8 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:CovidHotspots/mlResponse.dart';
 import 'package:flutter/material.dart';
 
-import 'package:tflite/tflite.dart';
+import 'package:http/http.dart' as http;
+
 
 void main() {
   runApp(MyApp());
@@ -13,6 +16,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Breh',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -50,7 +54,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 width: MediaQuery.of(context).size.width / 2,
                 child: Center(
                   child: Image(
-                    image: AssetImage("assets/meme_tron_edited.png"),
+                    image: AssetImage("assets/nasa_logo_3.png"),
                     width: MediaQuery.of(context).size.width / 3,
                   ),
                 ),
@@ -92,7 +96,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ))),
       floatingActionButton: FloatingActionButton.extended(
           backgroundColor: Color.fromARGB(255, 252, 61, 33),
-          onPressed: () {},
+          onPressed: fabMl,
           label: Text(
             "Predict My Fate",
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -149,4 +153,70 @@ class _MyHomePageState extends State<MyHomePage> {
       this.masksRec = double.tryParse(val);
     });
   }
+
+  void fabMl() {
+      final res = fetchData();
+
+          Dialog present = Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+            child: Container(
+              height: MediaQuery.of(context).size.height/3,
+              width: MediaQuery.of(context).size.width/4,
+              child: FutureBuilder<MLResponse>(
+                future: res,
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return Column(
+                      children: [
+                        Text(
+                             "Percentage Value: " + snapshot.data.percentageCases.toString() + "\nMean Squared Error: " + snapshot.data.meanSqrErr.toString() + "\nStandard Deviation: " + snapshot.data.stanDev.toString(),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 30
+                          ),
+                        ),
+                      ],
+                    );
+                  } else if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                          "Ruh Roh We did a bad,\nBlame the tron meme team",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 30
+                        ),
+                      ),
+                    );
+                  }
+                  // By default, show a loading spinner.
+                  return CircularProgressIndicator();
+                },
+              )
+            ),
+          );
+          showDialog(context: context, builder: (BuildContext context) => present);
+      }
+
+
+  Future<MLResponse> fetchData() async {
+    http.Response res = await http.get("http://localhost:8000?" +
+        "income=" + income.toString() +
+        "&popdense=" + popDense.toString() +
+        "&age=" + age.toString() +
+        "&airport=" + airports.toString() +
+        "&masksmandatory=" + masksMandatory.toString() +
+        "&masksrec=" + masksRec.toString()
+    );
+    
+    if(res.statusCode == 200) {
+      return MLResponse.fromJson(jsonDecode(res.body));
+    } else {
+      return null;
+    }
+
+  }
+
+
 }
