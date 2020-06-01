@@ -1,12 +1,10 @@
 class MLResponse {
-  final double percentageCases, meanSqrErr, stanDev;
+  final double hotspot;
   
-  MLResponse({this.percentageCases,this.meanSqrErr,this.stanDev});
+  MLResponse({this.hotspot});
   factory MLResponse.fromJson(Map<String,dynamic> json) {
     return MLResponse(
-      percentageCases: json['Value'],
-      meanSqrErr: json['MeanSquaredError'],
-      stanDev: json['StandardDeviation']
+      hotspot: json['Value'],
     );
   }
 }

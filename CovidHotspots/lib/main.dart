@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:CovidHotspots/mlResponse.dart';
 import 'package:flutter/material.dart';
+import 'dart:js' as js;
 
 import 'package:http/http.dart' as http;
 
@@ -15,13 +16,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Covid19 Hotspot Factors Calculator',
+      debugShowCheckedModeBanner: true,
+      title: 'COVID-19 Hotspot Predictor',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: MyHomePage(title: 'Bruh Moment Predictor'),
+      home: MyHomePage(title: 'COVID-19 Hotspot Predictor'),
     );
   }
 }
@@ -42,7 +43,8 @@ class _MyHomePageState extends State<MyHomePage> {
       airports,
       masksMandatory,
       masksRec,
-      popDenseState;
+      popDenseState,
+      pop20;
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +70,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         child: Center(
                             child: SizedBox(
                       width: (MediaQuery.of(context).size.width * 4 / 9),
-                      height: (MediaQuery.of(context).size.height * 13 / 18),
+                      height: (MediaQuery.of(context).size.height * 15 / 18),
                       child: Card(
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(15)),
@@ -76,25 +78,26 @@ class _MyHomePageState extends State<MyHomePage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: <Widget>[
                             Text(
-                              'Please enter the human factors,\nTo see how each factor affects\nThe percentage of population infected with covid 19',
+                              'Please enter the human factors,\nto see whether your city\n will be a COVID-19 hotspot',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: 30,
                               ),
                             ),
-                            Padding(padding: EdgeInsets.only(top: 20),),
+                            Padding(padding: EdgeInsets.only(top: 15),),
                             textInput(
-                                onChangedIncome, "Average Personal Income"),
-                            textInput(onChangedAirports, "Airports nearby"),
+                                onChangedIncome, "Average yearly personal income (USD)"),
+                            textInput(onChangedAirports, "# of airports within 50km"),
+                            textInput(onChangedPop20, "Population of city"),
                             textInput(onChangedPopDense,
-                                "Population Density of City"),
+                                "Population density of city (people per km^2)"),
                             textInput(onChangedPopDenseState,
-                                "Population Density of State"),
-                            textInput(onChangedAge, "Median Age"),
+                                "Population density of state (people per km^2)"),
+                            textInput(onChangedAge, "Median age (years) "),
                             textInput(onChangedMaskMandatory,
-                                "# of Days that Masks were Mandatory"),
+                                "# of days that masks were mandatory"),
                             textInput(onChangedMaskRec,
-                                "# of Days Masks were required OR mandatory from today"),
+                                "# of days masks were recommended"),
                           ],
                         ),
                       ),
@@ -177,71 +180,78 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 
-  void fabMl() {
-    final res = fetchData();
+  void onChangedPop20(String val) {
+    setState(() {
+      this.pop20 = double.tryParse(val);
+    });
+  }
 
-    Dialog present = Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Container(
-          height: MediaQuery.of(context).size.height / 3,
-          width: MediaQuery.of(context).size.width / 4,
-          child: FutureBuilder<MLResponse>(
-            future: res,
-            builder: (context, snapshot) {
-              if (snapshot.hasData) {
-                return Column(
-                  children: [
-                    Text(
-                      "Percentage Value: " +
-                          snapshot.data.percentageCases.toString() +
-                          "\nMean Squared Error: " +
-                          snapshot.data.meanSqrErr.toString() +
-                          "\nStandard Deviation: " +
-                          snapshot.data.stanDev.toString(),
-                      textAlign: TextAlign.center,
-                      style:
+  void fabMl()  {
+    var res = fetchData();
+      Dialog present = Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        child: Container(
+            height: MediaQuery.of(context).size.height / 3,
+            width: MediaQuery.of(context).size.width / 4,
+            child: FutureBuilder<MLResponse>(
+              future: res,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  return
+                      Center(
+                        child: Text(
+                          (snapshot.data.hotspot == 1.0)? "Your town will be a hotspot": "Your town will NOT be a hotspot",
+                          //snapshot.data.hotspot.toString(),
+                          textAlign: TextAlign.center,
+                          style:
                           TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
+                        ),
+                  );
+                } else if (snapshot.hasError) {
+
+                  return Center(
+                    child: Text(
+                      "Unfortunately we were unable\nto connect to the server.\nPlease Try Again Later \n",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
                     ),
-                  ],
-                );
-              } else if (snapshot.hasError) {
+                  );
+                }
+                // By default, show a loading spinner.
                 return Center(
-                  child: Text(
-                    "Unfortunately We Were Unable\nTo Connect To The Server\nPlease Try Again Later",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 30),
-                  ),
+                    child: Container(
+                      height: MediaQuery.of(context).size.height / 6,
+                      width: MediaQuery.of(context).size.height / 6,
+                      child: CircularProgressIndicator(),
+                    )
                 );
-              }
-              // By default, show a loading spinner.
-              return CircularProgressIndicator();
-            },
-          )),
-    );
-    showDialog(context: context, builder: (BuildContext context) => present);
+              },
+            )),
+      );
+      showDialog(context: context, builder: (BuildContext context) => present);
+
+
+
   }
 
   Future<MLResponse> fetchData() async {
-    http.Response res = await http.get("http://localhost:8000?" +
-        "income=" +
-        income.toString() +
-        "&popdenseCity=" +
-        popDense.toString() +
-        "&popdenseState=" +
-        popDenseState.toString() +
-        "&age=" +
-        age.toString() +
-        "&airport=" +
-        airports.toString() +
-        "&masksmandatory=" +
-        masksMandatory.toString() +
-        "&masksrec=" +
-        masksRec.toString());
+//    js.context.callMethod("alert", <String>["Your debug message"]);
+    final res = await http.get("http://127.0.0.1:8094/predict?values=" +
+        masksRec.toString() + "," +
+        masksMandatory.toString() + "," +
+        income.toString() + "," +
+        airports.toString() + "," +
+        popDense.toString() + "," +
+        popDenseState.toString() + "," +
+        age.toString() + "," +
+        pop20.toString()
+    );
 
-    if (res.statusCode == 200) {
-      return MLResponse.fromJson(jsonDecode(res.body));
+    if(res.statusCode == 200) {
+      return MLResponse.fromJson(json.decode(res.body));
     } else {
-      return null;
+      throw Exception("failed to learn json");
     }
+
   }
 }
