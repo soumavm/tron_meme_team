@@ -113,7 +113,7 @@ class _MyHomePageState extends State<MyHomePage> {
             alignment: Alignment.center,
             padding: EdgeInsets.all(30),
               child: Text(
-            "Calculate With Machine Learning",
+            "Calculate Using Machine Learning",
             style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
           )),
         ));
