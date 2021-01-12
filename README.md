@@ -1,4 +1,3 @@
 # tron_meme_team
-The meme team supreme is going to meme the American dream theme.com
-# PLEASE SEE
-# Most Updated Code is the Flutter_Site branch, please judge that.
+Covid hotspot calculator which determines whether a location will be a covid hotspot based on geographic & demographical factors.
+Features a flutter-based web application, as well as a python machine learning script which reads information from an excel backend.
